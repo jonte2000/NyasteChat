@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Chat App</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.chat-box {
+  width: 400px;
+  background: #111827;
+  padding: 15px;
+  border-radius: 12px;
+}
+
+#chat {
+  height: 350px;
+  overflow-y: auto;
+  background: #1f2937;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.msg {
+  margin: 6px 0;
+  padding: 6px;
+  background: #374151;
+  border-radius: 6px;
+}
+
+input {
+  width: 70%;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+button {
+  width: 25%;
+  padding: 10px;
+  background: #3b82f6;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="chat-box">
+
+  <div class="top">
+    <button onclick="login()">🔐 Google Login</button>
+    <span id="user">Inte inloggad</span>
+  </div>
+
+  <div id="chat"></div>
+
+  <input id="msg" placeholder="Skriv meddelande..." />
+  <button onclick="send()">Send</button>
+
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://supabase.com/dashboard/project/jgpvltygligzcbirdved",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpncHZsdHlnbGlnemNiaXJkdmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTAxOTIsImV4cCI6MjA5NDkyNjE5Mn0.Z4eU8maqA9ZDwyAHCQ4jvPPnvG9iEMGssdPlZXx4nOs"
+);
+
+// 🔐 LOGIN (Google)
+window.login = async function () {
+  await supabase.auth.signInWithOAuth({
+    provider: "google"
+  });
+};
+
+// 👤 Hämta user
+let userEmail = null;
+
+supabase.auth.getUser().then(res => {
+  if (res.data.user) {
+    userEmail = res.data.user.email;
+
+    // första 10 tecken av email
+    document.getElementById("user").innerText =
+      userEmail.substring(0, 10);
+  }
+});
+
+// 💬 load messages
+async function load() {
+  const { data } = await supabase
+    .from("messages")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  document.getElementById("chat").innerHTML =
+    data.map(m =>
+      `<div class="msg"><b>${m.user}</b>: ${m.message}</div>`
+    ).join("");
+
+  document.getElementById("chat").scrollTop =
+    document.getElementById("chat").scrollHeight;
+}
+
+// 📤 SEND MESSAGE
+window.send = async function () {
+  const msg = document.getElementById("msg").value;
+  if (!msg) return;
+
+  if (!userEmail) {
+    alert("Logga in först!");
+    return;
+  }
+
+  await supabase.from("messages").insert({
+    user: userEmail.substring(0, 10),
+    message: msg
+  });
+
+  document.getElementById("msg").value = "";
+  load();
+};
+
+load();
+</script>
+
+</body>
+</html>
